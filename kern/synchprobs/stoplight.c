@@ -75,7 +75,7 @@
 
 static struct lock* lk;
 static struct cv* cv;
-static volatile unsigned roadnum = 4;
+static volatile unsigned roadnum = 5;
 static struct lock* roadlocks[4];
 
 void
