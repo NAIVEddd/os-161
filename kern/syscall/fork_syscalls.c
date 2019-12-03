@@ -27,44 +27,83 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _SYSCALL_H_
-#define _SYSCALL_H_
+#include <types.h>
+#include <clock.h>
+#include <copyinout.h>
+#include <syscall.h>
+#include <lib.h>
+#include <file.h>
+#include <proc.h>
+#include <current.h>
+#include <kern/errno.h>
+#include <addrspace.h>
+#include <vm.h>
+#include <mips/trapframe.h>
 
+static
+void
+forkthread(void *ptr, unsigned long nargs)
+{
+    (void)nargs;
 
-#include <cdefs.h> /* for __DEAD */
-struct trapframe; /* from <machine/trapframe.h> */
+    struct trapframe tf;
+    const_userptr_t tfp = ((void**)ptr)[0];
+    memcpy(&tf, tfp, sizeof(tf));
+    as_activate();
+    kfree(ptr);
+
+    enter_forked_process(&tf);
+}
 
 /*
- * The system call dispatcher.
+ * open system call:
  */
+pid_t
+sys_fork(struct trapframe * tf)
+{
+    // alloc pid
+    // create new proc, copy addrspace
+    // copy fds
+    // set up stack
+    void** args = kmalloc(2 * sizeof(void*));
+    if(args == NULL) {
+        return -1;
+    }
+    
+    struct addrspace *as;
+    //vaddr_t entrypoint, stackptr;
+    struct proc* proc;
+    int result;
 
-void syscall(struct trapframe *tf);
+    result = as_copy(curthread->t_proc->p_addrspace, &as);
+    if(result) {
+        return -1;
+    }
 
-/*
- * Support functions.
- */
+    proc = proc_create_runprogram(curthread->t_proc->p_name);
+    if(proc == NULL) {
+        as_destroy(as);
+        return -1;
+    }
+    files_struct_destroy(proc->p_fds);
+    proc->p_addrspace = as;
 
-/* Helper for fork(). You write this. */
-void enter_forked_process(struct trapframe *tf);
+    // copy old files table
+    files_struct_incref(curproc->p_fds);
+    proc->p_fds = curproc->p_fds;
 
-/* Enter user mode. Does not return. */
-__DEAD void enter_new_process(int argc, userptr_t argv, userptr_t env,
-		       vaddr_t stackptr, vaddr_t entrypoint);
+    args[0] = tf;
 
+    result = thread_fork("forked_thread",
+            proc,
+            forkthread,
+            args, 1);
+    if (result) {
+        as_destroy(as);
+        proc->p_addrspace = NULL;
+        proc_destroy(proc);
+        return -1;
+    }
 
-/*
- * Prototypes for IN-KERNEL entry points for system call implementations.
- */
-
-int sys_reboot(int code);
-int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
-pid_t sys_getpid(void);
-pid_t sys_fork(struct trapframe * tf);
-ssize_t sys_open(const void * pathname, int flags, int mode);
-int sys_dup2(int fd1, int fd2);
-int sys_close(int fd);
-ssize_t sys_read(int fs, void* buf, size_t N);
-ssize_t sys_write(int fd, const void * buf, size_t N);
-off_t sys_lseek(int fd, off_t offset, int pos);
-
-#endif /* _SYSCALL_H_ */
+    return proc->p_pid;
+}

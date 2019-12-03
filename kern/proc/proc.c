@@ -57,6 +57,16 @@
  */
 struct proc *kproc;
 
+static pid_t cur_pid = 0;
+
+#define MAX_PID	65535
+pid_t Genarate_pid(void);
+
+pid_t Genarate_pid(void)
+{
+	cur_pid = (cur_pid % MAX_PID) + 1;
+	return cur_pid;
+}
 /*
  * Create a proc structure.
  */
@@ -99,6 +109,11 @@ proc_create(const char *name)
 			fp = file_create((char*)"con:", O_RDWR, 0);
 			files_struct_append(proc->p_fds, fp);
 		}
+
+		proc->p_pid = Genarate_pid();
+	}
+	else {
+		proc->p_pid = 0;
 	}
 
 	return proc;

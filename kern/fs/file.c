@@ -45,15 +45,47 @@ struct files_struct * files_struct_create(char* name)
         kfree(files);
         return NULL;
     }
+    for(int i = 0; i != FILES_STRUCT_DEFAULT_CAPACITY; i++) {
+        files->fds[i] = NULL;
+    }
 
     files->count = 0;
+    files->refc = 1;
     files->capacity = FILES_STRUCT_DEFAULT_CAPACITY;
     return files;
+}
+
+uint32_t files_struct_incref(struct files_struct * files)
+{
+    KASSERT(files != NULL);
+    uint32_t res;
+
+    lock_acquire(files->lock);
+    files->refc ++;
+    res = files->refc;
+    lock_release(files->lock);
+    return res;
+}
+
+uint32_t files_struct_decref(struct files_struct * files)
+{
+    KASSERT(files != NULL);
+    uint32_t res;
+
+    lock_acquire(files->lock);
+    files->refc --;
+    res = files->refc;
+    lock_release(files->lock);
+    return res;
 }
 
 void files_struct_destroy(struct files_struct * files)
 {
     KASSERT(files != NULL);
+    if(files_struct_decref(files) != 0) {
+        return;
+    }
+
     kfree(files->procname);
     
     lock_acquire(files->lock);

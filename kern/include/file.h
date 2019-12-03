@@ -25,12 +25,14 @@ struct files_struct {
     struct lock* lock;  // protect self
     volatile uint32_t count;     // opened files num
     volatile uint32_t capacity;  // length of files array
+    volatile uint32_t refc;      // reference count
     struct file** fds;
 };
 
 // open stdin/stdout/stderr file by default
 struct files_struct* files_struct_create(char* name);
-
+uint32_t files_struct_incref(struct files_struct * files);
+uint32_t files_struct_decref(struct files_struct * files);
 void files_struct_destroy(struct files_struct * files);
 
 ssize_t files_struct_append(struct files_struct * files, struct file* f);

@@ -15,6 +15,8 @@ cp ./include/file.h ../ops-class/os161/kern/include/file.h
 cp ./fs/file.c ../ops-class/os161/kern/fs/file.c
 cp ./proc/proc.c ../ops-class/os161/kern/proc/proc.c
 cp ./arch/mips/syscall/syscall.c ../ops-class/os161/kern/arch/mips/syscall/syscall.c
+cp ./syscall/getpid_syscalls.c ../ops-class/os161/kern/syscall/getpid_syscalls.c
+cp ./syscall/fork_syscalls.c ../ops-class/os161/kern/syscall/fork_syscalls.c
 cp ./syscall/open_syscalls.c ../ops-class/os161/kern/syscall/open_syscalls.c
 cp ./syscall/dup2_syscalls.c ../ops-class/os161/kern/syscall/dup2_syscalls.c
 cp ./syscall/close_syscalls.c ../ops-class/os161/kern/syscall/close_syscalls.c

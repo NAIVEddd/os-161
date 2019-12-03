@@ -31,6 +31,7 @@
 #include <kern/errno.h>
 #include <kern/syscall.h>
 #include <lib.h>
+#include <mips/specialreg.h>
 #include <mips/trapframe.h>
 #include <thread.h>
 #include <current.h>
@@ -116,6 +117,14 @@ syscall(struct trapframe *tf)
 		break;
 
 	    /* Add stuff here */
+		case SYS_getpid:
+		err = sys_getpid();
+		break;
+		
+		case SYS_fork:
+		err = sys_fork(tf);
+		break;
+
 		case SYS_open:
 		err = sys_open((const void*)tf->tf_a0, (int)tf->tf_a1, 0);
 		break;
@@ -193,4 +202,10 @@ void
 enter_forked_process(struct trapframe *tf)
 {
 	(void)tf;
+
+	tf->tf_v0 = 0;
+	tf->tf_status = CST_IRQMASK | CST_IEp | CST_KUp;
+    tf->tf_epc += 4;
+
+	mips_usermode(tf);
 }

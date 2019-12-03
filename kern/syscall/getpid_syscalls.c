@@ -27,44 +27,22 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _SYSCALL_H_
-#define _SYSCALL_H_
-
-
-#include <cdefs.h> /* for __DEAD */
-struct trapframe; /* from <machine/trapframe.h> */
-
-/*
- * The system call dispatcher.
- */
-
-void syscall(struct trapframe *tf);
-
-/*
- * Support functions.
- */
-
-/* Helper for fork(). You write this. */
-void enter_forked_process(struct trapframe *tf);
-
-/* Enter user mode. Does not return. */
-__DEAD void enter_new_process(int argc, userptr_t argv, userptr_t env,
-		       vaddr_t stackptr, vaddr_t entrypoint);
+#include <types.h>
+#include <copyinout.h>
+#include <syscall.h>
+#include <lib.h>
+#include <file.h>
+#include <proc.h>
+#include <current.h>
+#include <kern/errno.h>
+#include <vm.h>
 
 
 /*
- * Prototypes for IN-KERNEL entry points for system call implementations.
+ * open system call:
  */
-
-int sys_reboot(int code);
-int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
-pid_t sys_getpid(void);
-pid_t sys_fork(struct trapframe * tf);
-ssize_t sys_open(const void * pathname, int flags, int mode);
-int sys_dup2(int fd1, int fd2);
-int sys_close(int fd);
-ssize_t sys_read(int fs, void* buf, size_t N);
-ssize_t sys_write(int fd, const void * buf, size_t N);
-off_t sys_lseek(int fd, off_t offset, int pos);
-
-#endif /* _SYSCALL_H_ */
+pid_t
+sys_getpid(void)
+{
+    return curproc->p_pid;
+}
