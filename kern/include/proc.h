@@ -40,8 +40,18 @@
 
 struct addrspace;
 struct thread;
+struct threadlist;
 struct files_struct;
 struct vnode;
+struct cv;
+struct procevent {
+	enum events {
+		PE_none,
+		PE_interupt,
+		PE_childexit
+	} event;
+	struct proc* proc;
+};
 
 /*
  * Process structure.
@@ -73,7 +83,15 @@ struct proc {
 
 	/* add more material here as needed */
 	struct files_struct * p_fds;
-	pid_t p_pid;
+	pid_t p_pid;	// curproc pid
+	pid_t p_ppid;	// parent pid
+	int32_t p_xcode;	// exit code
+	struct proc * p_parent;
+
+	struct procevent p_eventarray[20];
+
+	struct lock * p_locksubpwait;	// lock for sub process exit
+	struct cv * p_cvsubpwait;	// wait sub process exit
 };
 
 /* This is the process structure for the kernel and for kernel-only threads. */

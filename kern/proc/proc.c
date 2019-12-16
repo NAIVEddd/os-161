@@ -64,7 +64,9 @@ pid_t Genarate_pid(void);
 
 pid_t Genarate_pid(void)
 {
+	lock_acquire(kproc->p_locksubpwait);
 	cur_pid = (cur_pid % MAX_PID) + 1;
+	lock_release(kproc->p_locksubpwait);
 	return cur_pid;
 }
 /*
@@ -95,12 +97,32 @@ proc_create(const char *name)
 	/* VFS fields */
 	proc->p_cwd = NULL;
 
+	/* */
+	proc->p_locksubpwait = lock_create(name);
+	if(proc->p_locksubpwait == NULL) {
+		kfree(proc->p_name);
+		kfree(proc);
+		return NULL;
+	}
+
+	proc->p_cvsubpwait = cv_create(name);
+	if(proc->p_cvsubpwait == NULL) {
+		lock_destroy(proc->p_locksubpwait);
+		kfree(proc->p_name);
+		kfree(proc);
+		return NULL;
+	}
+
+	memset(proc->p_eventarray, 0, sizeof(*proc->p_eventarray) * 20);
+
 	/* Console support */
 	if(kproc != NULL) {
 		struct file* fp;
 		proc->p_fds = files_struct_create(proc->p_name);
 		if(proc->p_fds == NULL) {
+			lock_destroy(proc->p_locksubpwait);
 			kfree(proc->p_name);
+			cv_destroy(proc->p_cvsubpwait);
 			kfree(proc);
 			return NULL;
 		}
@@ -111,9 +133,13 @@ proc_create(const char *name)
 		}
 
 		proc->p_pid = Genarate_pid();
+		proc->p_ppid = curthread->t_proc->p_pid;
+		proc->p_parent = curthread->t_proc;
 	}
 	else {
 		proc->p_pid = 0;
+		proc->p_ppid = 0;
+		proc->p_parent = NULL;
 	}
 
 	return proc;
@@ -204,6 +230,9 @@ proc_destroy(struct proc *proc)
 
 	// release file-related fields
 	files_struct_destroy(proc->p_fds);
+
+	cv_destroy(proc->p_cvsubpwait);
+	lock_destroy(proc->p_locksubpwait);
 
 	kfree(proc->p_name);
 	kfree(proc);

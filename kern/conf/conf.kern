@@ -386,6 +386,8 @@ file      vfs/devnull.c
 
 file      syscall/loadelf.c
 file      syscall/runprogram.c
+file      syscall/exit_syscalls.c
+file      syscall/waitpid_syscalls.c
 file      syscall/getpid_syscalls.c
 file      syscall/fork_syscalls.c
 file      syscall/time_syscalls.c

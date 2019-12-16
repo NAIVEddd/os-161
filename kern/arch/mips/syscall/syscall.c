@@ -117,6 +117,15 @@ syscall(struct trapframe *tf)
 		break;
 
 	    /* Add stuff here */
+		case SYS__exit:
+		sys_exit((int)tf->tf_a0);
+		err = 0;
+		break;
+
+		case SYS_waitpid:
+		err = sys_waitpid((pid_t)tf->tf_a0, (int *) tf->tf_a1, (int) tf->tf_a2);
+		break;
+
 		case SYS_getpid:
 		err = sys_getpid();
 		break;
@@ -204,6 +213,7 @@ enter_forked_process(struct trapframe *tf)
 	(void)tf;
 
 	tf->tf_v0 = 0;
+	tf->tf_a3 = 0;
 	tf->tf_status = CST_IRQMASK | CST_IEp | CST_KUp;
     tf->tf_epc += 4;
 

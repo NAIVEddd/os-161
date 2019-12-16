@@ -47,9 +47,13 @@ forkthread(void *ptr, unsigned long nargs)
     (void)nargs;
 
     struct trapframe tf;
-    const_userptr_t tfp = ((void**)ptr)[0];
+    struct addrspace * as;
+    void * tfp = ((void**)ptr)[0];
+    as = (struct addrspace*)(((void**)ptr)[1]);
     memcpy(&tf, tfp, sizeof(tf));
+    proc_setas(as);
     as_activate();
+    kfree(tfp);
     kfree(ptr);
 
     enter_forked_process(&tf);
@@ -86,21 +90,22 @@ sys_fork(struct trapframe * tf)
         return -1;
     }
     files_struct_destroy(proc->p_fds);
-    proc->p_addrspace = as;
 
     // copy old files table
     files_struct_incref(curproc->p_fds);
     proc->p_fds = curproc->p_fds;
 
-    args[0] = tf;
+    struct trapframe * tfp = kmalloc(sizeof(struct trapframe));
+    memcpy(tfp, tf, sizeof(struct trapframe));
+    args[0] = tfp;
+    args[1] = as;
 
     result = thread_fork("forked_thread",
             proc,
             forkthread,
-            args, 1);
+            args, 2);
     if (result) {
         as_destroy(as);
-        proc->p_addrspace = NULL;
         proc_destroy(proc);
         return -1;
     }

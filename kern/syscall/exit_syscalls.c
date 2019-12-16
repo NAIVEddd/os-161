@@ -27,46 +27,51 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _SYSCALL_H_
-#define _SYSCALL_H_
-
-
-#include <cdefs.h> /* for __DEAD */
-struct trapframe; /* from <machine/trapframe.h> */
-
-/*
- * The system call dispatcher.
- */
-
-void syscall(struct trapframe *tf);
-
-/*
- * Support functions.
- */
-
-/* Helper for fork(). You write this. */
-void enter_forked_process(struct trapframe *tf);
-
-/* Enter user mode. Does not return. */
-__DEAD void enter_new_process(int argc, userptr_t argv, userptr_t env,
-		       vaddr_t stackptr, vaddr_t entrypoint);
-
+#include <types.h>
+#include <clock.h>
+#include <copyinout.h>
+#include <syscall.h>
+#include <lib.h>
+#include <file.h>
+#include <proc.h>
+#include <current.h>
+#include <kern/errno.h>
+#include <thread.h>
+#include <threadlist.h>
+#include <cpu.h>
+#include <array.h>
+#include <synch.h>
 
 /*
- * Prototypes for IN-KERNEL entry points for system call implementations.
+ * exit system call:
  */
 
-int sys_reboot(int code);
-int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
-void sys_exit(int status);
-pid_t sys_waitpid(pid_t pid, int * status_ptr, int options);
-pid_t sys_getpid(void);
-pid_t sys_fork(struct trapframe * tf);
-ssize_t sys_open(const void * pathname, int flags, int mode);
-int sys_dup2(int fd1, int fd2);
-int sys_close(int fd);
-ssize_t sys_read(int fs, void* buf, size_t N);
-ssize_t sys_write(int fd, const void * buf, size_t N);
-off_t sys_lseek(int fd, off_t offset, int pos);
+void
+sys_exit(int status)
+{
+    struct proc * this = curthread->t_proc;
+    struct proc * parent = this->p_parent;
 
-#endif /* _SYSCALL_H_ */
+    thread_collect(this, &curcpu->c_zombies);
+
+    spinlock_acquire(&parent->p_lock);
+    for (int i = 0; i != 20; i++) {
+        if(parent->p_eventarray[i].proc == NULL) {
+            parent->p_eventarray[i].proc = this;
+            parent->p_eventarray[i].event = PE_childexit;
+            break;
+        }
+    }
+    spinlock_release(&parent->p_lock);
+    
+    this->p_xcode = status;
+    lock_acquire(parent->p_locksubpwait);
+    cv_signal(parent->p_cvsubpwait, parent->p_locksubpwait);
+    lock_release(parent->p_locksubpwait);
+
+    schedule();
+    thread_exit();
+
+    for(;;)
+        cpu_idle();
+}
