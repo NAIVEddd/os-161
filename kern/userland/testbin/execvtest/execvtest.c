@@ -27,47 +27,43 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _SYSCALL_H_
-#define _SYSCALL_H_
-
-
-#include <cdefs.h> /* for __DEAD */
-struct trapframe; /* from <machine/trapframe.h> */
-
 /*
- * The system call dispatcher.
+ * Simple program to add two numbers (given in as arguments). Used to
+ * test argument passing to child processes.
+ *
+ * Intended for the basic system calls assignment; this should work
+ * once execv() argument handling is implemented.
  */
 
-void syscall(struct trapframe *tf);
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <err.h>
+#include <test161/test161.h>
 
-/*
- * Support functions.
- */
+int
+main(int argc, char *argv[])
+{
+	(void) argc;
+	(void) argv;
+	printf("parrent program:\n");
+	const char * filename = "/testbin/add";
+	const char * args[4];
 
-/* Helper for fork(). You write this. */
-void enter_forked_process(struct trapframe *tf);
+	args[0] = "add";
+	args[1] = "13";
+	args[2] = "34";
+	args[3] = NULL;
 
-/* Enter user mode. Does not return. */
-__DEAD void enter_new_process(int argc, userptr_t argv, userptr_t env,
-		       vaddr_t stackptr, vaddr_t entrypoint);
-
-
-/*
- * Prototypes for IN-KERNEL entry points for system call implementations.
- */
-
-int sys_reboot(int code);
-int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
-int sys_execv(const char* path, char * const argv[]);
-void sys_exit(int status);
-pid_t sys_waitpid(pid_t pid, int * status_ptr, int options);
-pid_t sys_getpid(void);
-pid_t sys_fork(struct trapframe * tf);
-ssize_t sys_open(const void * pathname, int flags, int mode);
-int sys_dup2(int fd1, int fd2);
-int sys_close(int fd);
-ssize_t sys_read(int fs, void* buf, size_t N);
-ssize_t sys_write(int fd, const void * buf, size_t N);
-off_t sys_lseek(int fd, off_t offset, int pos);
-
-#endif /* _SYSCALL_H_ */
+	int code = 0;
+	int status = 0;
+	pid_t pid = fork();
+	if(pid == 0) {
+		printf("	execv[add]\n");
+		execv(filename, (char* const *)args);
+	} else {
+		waitpid(pid, &code, status);
+		printf("	subprocess[add] exited.\n");
+	}
+	return 0;
+}

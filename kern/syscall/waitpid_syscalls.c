@@ -55,20 +55,25 @@ sys_waitpid(pid_t pid, int *status_ptr, int options)
 
     pid_t pidval = 0;
     struct proc * proc = curthread->t_proc;
+    struct proc * targ = NULL;
     do {
         for(unsigned i = 0; i != 20; i++) {
             if(pid == -1) {
                 if(proc->p_eventarray[i].event == PE_childexit) {
                     *status_ptr = proc->p_eventarray[i].proc->p_xcode;
                     pidval = proc->p_eventarray[i].proc->p_pid;
+                    targ = proc->p_eventarray[i].proc;
                     proc->p_eventarray[i].event = PE_none;
                     proc->p_eventarray[i].proc = NULL;
                     goto done;
                 }
+            } else if(pid == 0) {
+                panic("Waitpid does't implement groupid.\n");
             } else {
                 if(proc->p_eventarray[i].event != PE_none && proc->p_eventarray[i].proc->p_pid == pid) {
                     pidval = pid;
                     *status_ptr = proc->p_eventarray[i].proc->p_xcode;
+                    targ = proc->p_eventarray[i].proc;
                     proc->p_eventarray[i].event = PE_none;
                     proc->p_eventarray[i].proc = NULL;
                     goto done;
@@ -80,5 +85,7 @@ sys_waitpid(pid_t pid, int *status_ptr, int options)
         lock_release(proc->p_locksubpwait);
     } while(true);
 done:
+    KASSERT(targ != NULL);
+    proc_destroy(targ);
     return pidval;
 }

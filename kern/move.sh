@@ -9,6 +9,7 @@ cp ./synchprobs/stoplight.c ../ops-class/os161/kern/synchprobs/
 
 cp ./conf/conf.kern ../ops-class/os161/kern/conf/conf.kern
 #Assignment 2.1
+cp -r ./userland/testbin/* ../ops-class/os161/userland/testbin/
 cp ./include/proc.h ../ops-class/os161/kern/include/proc.h
 cp ./include/syscall.h ../ops-class/os161/kern/include/syscall.h
 cp ./include/file.h ../ops-class/os161/kern/include/file.h
@@ -17,6 +18,7 @@ cp ./thread/thread.c ../ops-class/os161/kern/thread/thread.c
 cp ./fs/file.c ../ops-class/os161/kern/fs/file.c
 cp ./proc/proc.c ../ops-class/os161/kern/proc/proc.c
 cp ./arch/mips/syscall/syscall.c ../ops-class/os161/kern/arch/mips/syscall/syscall.c
+cp ./syscall/execv_syscalls.c ../ops-class/os161/kern/syscall/execv_syscalls.c
 cp ./syscall/exit_syscalls.c ../ops-class/os161/kern/syscall/exit_syscalls.c
 cp ./syscall/waitpid_syscalls.c ../ops-class/os161/kern/syscall/waitpid_syscalls.c
 cp ./syscall/getpid_syscalls.c ../ops-class/os161/kern/syscall/getpid_syscalls.c

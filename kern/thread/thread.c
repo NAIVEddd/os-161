@@ -1269,6 +1269,7 @@ thread_collect(struct proc * proc, struct threadlist *tl)
 			spinlock_acquire(&c->c_runqueue_lock);
 			THREADLIST_FORALL(thread, c->c_runqueue) {
 				if(thread->t_proc == proc) {
+					proc_remthread(thread);
 					thread->t_state = S_ZOMBIE;
 					threadlist_addtail(tl, thread);
 				}
