@@ -103,7 +103,6 @@ So the key point is through `fd` to find out the `vnode` inside `struct file`, t
 
         struct lock* p_lk;  // lock for this sruct
         struct lock* p_statlk;  // lock for the states
-        struct lock* p_exit;    // lock for _exit/wait
         struct lock* p_subexit; // lock for subprocess _exit/wait
         struct thread* p_trapth;    // trap thread
         struct threadlist* p_threads;   // multiple sub thread
@@ -111,10 +110,9 @@ So the key point is through `fd` to find out the `vnode` inside `struct file`, t
         uint32_t p_xcode;   // exit code
         uint32_t p_xsig;    // stop/kill sig
 
-        struct cv* p_cvwait; // wait cv for exit
         struct cv* p_cvsubpwait;  // wait cv for sub process exit
-        typedef void(*fatexit)(void);
-        list of fatexit p_fatexit;  // functions exec at exit
+        // typedef void(*fatexit)(void);
+        //list of fatexit p_fatexit;  // functions exec at exit
     };
 
     struct procevent {
@@ -124,14 +122,9 @@ So the key point is through `fd` to find out the `vnode` inside `struct file`, t
             killed,
             event,
         } type;
-        int code;
+        struct proc * proc;     // the event happened proc
     }
 
-    // struct thread needed fields
-    struct thread {
-        tid_t t_id;     // thread id
-        struct threadlist * t_plist;    // All thread in this process
-    }
 
 ### Pseudocode:
     // waitpid/_exit
@@ -157,9 +150,19 @@ So the key point is through `fd` to find out the `vnode` inside `struct file`, t
 
     }
 
+    int execv(char * pathname, void** argv)
+    {
+        copy userspace argv to kernel
+        load new program into new addrspace
+        make stack
+        copy kernel argv to userspace
+        enter new process
+    }
+
 ## Stability
 
 ### Test:
 - `p /testbin/badcall`
 - `p /testbin/crash`
 - `p /testbin/forktest`. run multiple iterations to check for race conditions
+- `p /testbin/execvtest` test execv() function.
