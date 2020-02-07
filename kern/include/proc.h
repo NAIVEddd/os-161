@@ -92,8 +92,6 @@ struct proc {
 
 	struct lock * p_locksubpwait;	// lock for sub process exit
 	struct cv * p_cvsubpwait;	// wait sub process exit
-
-	void ** argv;
 };
 
 /* This is the process structure for the kernel and for kernel-only threads. */

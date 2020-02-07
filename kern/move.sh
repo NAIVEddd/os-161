@@ -29,3 +29,9 @@ cp ./syscall/close_syscalls.c ../ops-class/os161/kern/syscall/close_syscalls.c
 cp ./syscall/read_syscalls.c ../ops-class/os161/kern/syscall/read_syscalls.c
 cp ./syscall/write_syscalls.c ../ops-class/os161/kern/syscall/write_syscalls.c
 cp ./syscall/lseek_syscalls.c ../ops-class/os161/kern/syscall/lseek_syscalls.c
+
+cp ./arch/mips/arch/conf.arch ../ops-class/os161/kern/arch/mips/conf/conf.arch
+cp ./arch/mips/vm/tpvm.c      ../ops-class/os161/kern/arch/mips/vm/tpvm.c
+cp ./main/main.c ../ops-class/os161/kern/main/main.c
+cp ./vm/addrspace.c ../ops-class/os161/kern/vm/addrspace.c
+cp ./include/addrspace.h ../ops-class/os161/kern/include/addrspace.h

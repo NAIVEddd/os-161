@@ -101,28 +101,28 @@ execv_helper(struct execv_arg* args)
 	}
 
 	{	// make argv in userspace
-		userptr_t userargvp = (userptr_t)as->as_vbase2;
-		userptr_t userargvcontent = (userptr_t)(as->as_vbase2+ sizeof(void*) * args->argc);
-		void* argvptr[args->argc];
-		unsigned offset = sizeof(void*) * args->argc;
-		unsigned count = 0;
-		unsigned len = 0;
-		for(int i = 0; i != args->argc; i++) {
-			copyoutstr(args->argvbuf + count, (userptr_t)(((char*)userargvcontent) + count), 200 - count, &len);
-			argvptr[i] = (void*)(userargvcontent + count);
-			count += len;
-		}
-		copyout((const void*)argvptr, userargvp, offset);
+		// userptr_t userargvp = (userptr_t)as->as_vbase2;
+		// userptr_t userargvcontent = (userptr_t)(as->as_vbase2+ sizeof(void*) * args->argc);
+		// void* argvptr[args->argc];
+		// unsigned offset = sizeof(void*) * args->argc;
+		// unsigned count = 0;
+		// unsigned len = 0;
+		// for(int i = 0; i != args->argc; i++) {
+		// 	copyoutstr(args->argvbuf + count, (userptr_t)(((char*)userargvcontent) + count), 200 - count, &len);
+		// 	argvptr[i] = (void*)(userargvcontent + count);
+		// 	count += len;
+		// }
+		// copyout((const void*)argvptr, userargvp, offset);
 
-		copyinstr((const_userptr_t)args->pathname, args->argvbuf, 200, &len);
-		kfree(curproc->p_name);
-		curproc->p_name = kstrdup(args->argvbuf);
-		KASSERT(curproc->p_name != NULL);
-		kfree(args->argvbuf);
-		kfree(args);
+		// copyinstr((const_userptr_t)args->pathname, args->argvbuf, 200, &len);
+		// kfree(curproc->p_name);
+		// curproc->p_name = kstrdup(args->argvbuf);
+		// KASSERT(curproc->p_name != NULL);
+		// kfree(args->argvbuf);
+		// kfree(args);
 
 		/* Warp to user mode. */
-		enter_new_process(args->argc /*argc*/, userargvp /*userspace addr of argv*/,
+		enter_new_process(args->argc /*argc*/, NULL, // userargvp /*userspace addr of argv*/,
 				NULL /*userspace addr of environment*/,
 				stackptr, entrypoint);
 	}

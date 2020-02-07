@@ -142,8 +142,6 @@ proc_create(const char *name)
 		proc->p_parent = NULL;
 	}
 
-	proc->argv = NULL;
-
 	return proc;
 }
 
@@ -235,10 +233,6 @@ proc_destroy(struct proc *proc)
 
 	cv_destroy(proc->p_cvsubpwait);
 	lock_destroy(proc->p_locksubpwait);
-
-	if(proc->argv != NULL) {
-		kfree(proc->argv);
-	}
 
 	kfree(proc->p_name);
 	kfree(proc);
