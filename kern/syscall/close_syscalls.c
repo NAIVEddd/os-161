@@ -45,7 +45,7 @@ sys_close(int fd)
 {
 	struct file* fp;
 	
-    fp = files_struct_get(curproc->p_fds, fd);
+    fp = files_struct_remove(curproc->p_fds, fd);
     if(fp == NULL) {
         return -EBADF;
     }

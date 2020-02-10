@@ -358,7 +358,7 @@ rwlock_create(const char* name)
 
 	lock->rw_cv = cv_create(name);
 	if(lock->rw_cv == NULL) {
-		kfree(lock->rw_lockself);
+		lock_destroy(lock->rw_lockself);
 		kfree(lock->rwlock_name);
 		kfree(lock);
 		return NULL;

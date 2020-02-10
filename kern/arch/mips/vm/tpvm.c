@@ -11,6 +11,8 @@
 #include <vm.h>
 #include <mainbus.h>
 #include <synch.h>
+#include <vfs.h>
+#include <kern/fcntl.h>
 
 struct page {
 	unsigned char ptr[PAGE_SIZE];
@@ -27,6 +29,27 @@ static struct PhysicalMemory * physicalmemory = NULL;
 static paddr_t lastaddr = (paddr_t)NULL;
 static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 static struct lock * memalloc_lock = NULL;
+
+static
+int
+WriteToTlb(uint32_t ehi, uint32_t elo)
+{
+	int spl = splhigh();
+	for (uint32_t i=1; i<NUM_TLB; i++) {
+		uint32_t ehir, elor;
+		tlb_read(&ehir, &elor, i);
+		if (elor & TLBLO_VALID) {
+			continue;
+		}
+		//DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
+		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", ehi, elo & PAGE_FRAME);
+		tlb_write(ehi, elo, i);
+		splx(spl);
+		return 0;
+	}
+	splx(spl);
+	return -1;
+}
 
 void
 vm_bootstrap(void)
@@ -60,12 +83,6 @@ void
 tpvm_acquirelock()
 {
 	if(CURCPU_EXISTS()) {
-		/* must not hold spinlocks */
-		KASSERT(curcpu->c_spinlocks == 0);
-
-		/* must not be in an interrupt handler */
-		KASSERT(curthread->t_in_interrupt == 0);
-
 		// Lock
 		lock_acquire(memalloc_lock);
 	}
@@ -76,12 +93,6 @@ void
 tpvm_releaselock()
 {
 	if(CURCPU_EXISTS()) {
-		/* must not hold spinlocks */
-		KASSERT(curcpu->c_spinlocks == 0);
-
-		/* must not be in an interrupt handler */
-		KASSERT(curthread->t_in_interrupt == 0);
-
 		// release lock
 		lock_release(memalloc_lock);
 	}
@@ -98,7 +109,7 @@ alloc_kpages(unsigned npages)
 	tpvm_acquirelock();
 
 	paddr_t pa = 0;
-	for(uint32_t i = 0; (i + npages) < physicalmemory->EmptyPageNumber; ++i) {
+	for(uint32_t i = 0; (i + npages) <= physicalmemory->TotalPageNumber; ++i) {
 		bool findit = true;
 		for(uint32_t j = i; j != i + npages; ++j) {
 			if(physicalmemory->IsMemoryUsed[j] != NULL) {
@@ -121,7 +132,9 @@ alloc_kpages(unsigned npages)
 	// release lock
 	tpvm_releaselock();
 
-	KASSERT(pa != 0);
+	if(pa == 0) {
+		KASSERT(pa != 0);
+	}
 	return PADDR_TO_KVADDR(pa);
 }
 
@@ -129,8 +142,17 @@ void
 free_kpages(vaddr_t addr)
 {
 	/* nothing - leak the memory. */
-
-	(void)addr;
+	tpvm_acquirelock();
+	uint32_t index = ((addr - MIPS_KSEG0) - physicalmemory->StartPointer) / PAGE_SIZE;
+	for(; index != (uint32_t)physicalmemory->TotalPageNumber; index ++) {
+		bool last = physicalmemory->IsMemoryUsed[index] == (struct page*)-1;
+		physicalmemory->IsMemoryUsed[index] = NULL;
+		physicalmemory->EmptyPageNumber += 1;
+		if(last) {
+			break;
+		}
+	}
+	tpvm_releaselock();
 }
 
 unsigned
@@ -139,14 +161,14 @@ coremap_used_bytes() {
 
 	/* dumbvm doesn't track page allocations. Return 0 so that khu works. */
 
-	return 0;
+	return (physicalmemory->TotalPageNumber - physicalmemory->EmptyPageNumber) * PAGE_SIZE;
 }
 
 void
 vm_tlbshootdown(const struct tlbshootdown *ts)
 {
 	(void)ts;
-	panic("dumbvm tried to do tlb shootdown?!\n");
+	panic("vm tried to do tlb shootdown?!\n");
 }
 
 int
@@ -163,12 +185,12 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	if(faultaddress < (vaddr_t)lastaddr) {
 		uint32_t ehi, elo;
-		int spl = splhigh();
 		ehi = faultaddress;
 		elo = faultaddress | TLBLO_DIRTY | TLBLO_VALID;
-		tlb_write(ehi, elo, 0);
-		splx(spl);
-		return 0;
+		if(WriteToTlb(ehi, elo) == 0) {
+			return 0;
+		}
+		return EFAULT;
 	}
 
 	struct addrspace * as = proc_getas();
@@ -181,18 +203,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		return EFAULT;
 	}
 	paddr_t paddr = pte->physical;
-	int spl = splhigh();
-	for (uint32_t i=1; i<NUM_TLB; i++) {
-		uint32_t ehi, elo;
-		tlb_read(&ehi, &elo, i);
-		if (elo & TLBLO_VALID) {
-			continue;
-		}
-		ehi = faultaddress;
-		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
-		tlb_write(ehi, elo, i);
-		splx(spl);
+	if(WriteToTlb((uint32_t)faultaddress, (uint32_t)(paddr | TLBLO_DIRTY | TLBLO_VALID)) == 0) {
 		return 0;
 	}
 	return EFAULT;

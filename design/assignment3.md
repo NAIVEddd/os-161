@@ -75,6 +75,14 @@ Assignment 3 Design
 #### Translate:
     P.A = V.A - Start + Base9
 
+## When vm_fault happend:
+need a new struct:
+    struct pagetable {
+
+    };
+this struct store 63 tlb entries.
+    put_into_tlb    // used in as_activate
+    remove_from_tlb // used in as_deactivate
 
 ## Malloc related System call
     void sbrk(...)

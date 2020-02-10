@@ -49,6 +49,18 @@ SegmentInit(struct Segment * seg)
 
 static
 void
+SegmentDestroy(struct Segment * seg)
+{
+	for(struct PteList * h = seg->ptes; h != NULL;) {
+		struct PteList * t = h;
+		h = h->next;
+		free_kpages(t->pte.virtual);
+		kfree(t);
+	}
+}
+
+static
+void
 SegmentMake(struct Segment * seg)
 {
 	for(struct PteList * h = seg->ptes; h != NULL; h = h->next) {
@@ -272,6 +284,10 @@ as_destroy(struct addrspace *as)
 	/*
 	 * Clean up as needed.
 	 */
+	SegmentDestroy(&as->code);
+	SegmentDestroy(&as->data);
+	SegmentDestroy(&as->heap);
+	SegmentDestroy(&as->stack);
 
 	kfree(as);
 }

@@ -126,11 +126,12 @@ proc_create(const char *name)
 			kfree(proc);
 			return NULL;
 		}
-		for (size_t i = 0; i < 3; i++)
-		{
-			fp = file_create((char*)"con:", O_RDWR, 0);
-			files_struct_append(proc->p_fds, fp);
-		}
+		fp = file_create((char*)"con:", O_RDWR, 0);
+		files_struct_append(proc->p_fds, fp);
+		fp = file_dup(fp);
+		files_struct_append(proc->p_fds, fp);
+		fp = file_dup(fp);
+		files_struct_append(proc->p_fds, fp);
 
 		proc->p_pid = Genarate_pid();
 		proc->p_ppid = curthread->t_proc->p_pid;

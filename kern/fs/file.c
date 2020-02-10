@@ -40,7 +40,7 @@ struct files_struct * files_struct_create(char* name)
     
     files->fds = kmalloc(FILES_STRUCT_DEFAULT_CAPACITY * sizeof(struct file*));
     if(files->fds == NULL) {
-        kfree(files->lock);
+        lock_destroy(files->lock);
         kfree(files->procname);
         kfree(files);
         return NULL;
@@ -85,8 +85,6 @@ void files_struct_destroy(struct files_struct * files)
     if(files_struct_decref(files) != 0) {
         return;
     }
-
-    kfree(files->procname);
     
     lock_acquire(files->lock);
     struct file* fp;
@@ -97,10 +95,14 @@ void files_struct_destroy(struct files_struct * files)
             file_destroy(fp);
         }
     }
-    kfree(files->fds);
+    files->fds = NULL;
     lock_release(files->lock);
     
     lock_destroy(files->lock);
+    kfree(files->procname);
+    kfree(files->fds);
+    files->lock = NULL;
+    files->procname = NULL;
     kfree(files);
 }
 
@@ -110,17 +112,18 @@ void files_struct_ensurespace(struct files_struct * files, uint32_t sz, bool has
         lock_acquire(files->lock);
     }
     if(sz > files->capacity) {
+        size_t oldcap = files->capacity;
         // no enough space, require more space
         while(sz > files->capacity) {
             files->capacity *= 2;
         }
         struct file** p = kmalloc(files->capacity * sizeof(struct file*));
         struct file** tmp = files->fds;
-        for (size_t i = 0; i < files->count; i++)
+        for (size_t i = 0; i < oldcap; i++)
         {
             p[i] = tmp[i];
         }
-        for (size_t i = files->count; i < files->capacity; i++)
+        for (size_t i = oldcap; i < files->capacity; i++)
         {
             p[i] = NULL;
         }
@@ -136,6 +139,7 @@ void files_struct_ensurespace(struct files_struct * files, uint32_t sz, bool has
 ssize_t files_struct_append(struct files_struct * files, struct file * file)
 {
     KASSERT(files != NULL);
+    KASSERT(file != NULL);
 
     ssize_t idx = -1;
     lock_acquire(files->lock);
@@ -243,7 +247,7 @@ struct file* file_create(char* path, int flags, int mode)
 
     fp->reflock = lock_create(path);
     if(fp->reflock == NULL) {
-        kfree(fp->lock);
+        rwlock_destroy(fp->lock);
         kfree(fp);
         return NULL;
     }
@@ -251,8 +255,8 @@ struct file* file_create(char* path, int flags, int mode)
     strcpy(buf, path);
     int err = vfs_open(buf, flags, mode, &fp->inode);
     if (err) {
-        kfree(fp->reflock);
-        kfree(fp->lock);
+        lock_destroy(fp->reflock);
+        rwlock_destroy(fp->lock);
         kfree(fp);
         return NULL;
     }

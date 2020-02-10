@@ -50,6 +50,7 @@
 #include <addrspace.h>
 #include <mainbus.h>
 #include <vnode.h>
+#include <syscall.h>
 
 
 /* Magic number used as a guard value on kernel thread stacks. */
@@ -1246,13 +1247,11 @@ interprocessor_interrupt(void)
 /*
  * Wait for the thread count to equal tc.
  */
-void thread_wait_for_count(unsigned tc)
+void thread_wait_for_count(unsigned pid)
 {
-	spinlock_acquire(&thread_count_lock);
-	while (thread_count != tc) {
-		wchan_sleep(thread_count_wchan, &thread_count_lock);
-	}
-	spinlock_release(&thread_count_lock);
+	int status = 0;
+	int option = 0;
+	sys_waitpid(pid, &status, option);
 }
 
 void
