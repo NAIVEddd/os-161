@@ -182,8 +182,8 @@ lock_destroy(struct lock *lock)
 	{
 		panic("Lock Panic: Still have wchan wait for this lock.\n");
 	}
-	wchan_destroy(lock->lk_wchan);
 	spinlock_release(&lock->lk_lock);
+	wchan_destroy(lock->lk_wchan);
 	spinlock_cleanup(&lock->lk_lock);
 
 	kfree(lock->lk_name);

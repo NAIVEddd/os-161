@@ -64,7 +64,7 @@ void
 SegmentMake(struct Segment * seg)
 {
 	for(struct PteList * h = seg->ptes; h != NULL; h = h->next) {
-		vaddr_t addr = alloc_kpages(1);
+		vaddr_t addr = alloc_kpages_swapable(1);
 		paddr_t paddr = addr - MIPS_KSEG0;
 		h->pte.virtual = addr;
 		h->pte.isInMemory = true;
@@ -82,7 +82,7 @@ void
 SegmentMakeNoZero(struct Segment * seg)
 {
 	for(struct PteList * h = seg->ptes; h != NULL; h = h->next) {
-		vaddr_t addr = alloc_kpages(1);
+		vaddr_t addr = alloc_kpages_swapable(1);
 		paddr_t paddr = addr - MIPS_KSEG0;
 		h->pte.virtual = addr;
 		h->pte.isInMemory = true;
@@ -292,31 +292,6 @@ as_destroy(struct addrspace *as)
 	kfree(as);
 }
 
-void
-as_activate(void)
-{
-	struct addrspace *as;
-
-	as = proc_getas();
-	if (as == NULL) {
-		/*
-		 * Kernel thread without an address space; leave the
-		 * prior address space in place.
-		 */
-		return;
-	}
-
-	/*
-	 * Write this.
-	 */
-	int spl = splhigh();
-
-	for (int i=1; i<NUM_TLB; i++) {
-		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
-	}
-
-	splx(spl);
-}
 
 void
 as_deactivate(void)
@@ -383,7 +358,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 			struct PTE pte;
 			pte.swapable = false;
 			pte.shared = false;
-			pte.isInMemory = false;
+			pte.isInMemory = true;
 			pte.executable = (bool)executable;
 			pte.readable = (bool)readable;
 			pte.writeable = (bool)writeable;

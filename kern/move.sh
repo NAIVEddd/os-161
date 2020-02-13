@@ -35,3 +35,4 @@ cp ./arch/mips/vm/tpvm.c      ../ops-class/os161/kern/arch/mips/vm/tpvm.c
 cp ./main/main.c ../ops-class/os161/kern/main/main.c
 cp ./vm/addrspace.c ../ops-class/os161/kern/vm/addrspace.c
 cp ./include/addrspace.h ../ops-class/os161/kern/include/addrspace.h
+cp ./include/vm.h ../ops-class/os161/kern/include/vm.h
